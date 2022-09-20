@@ -1,4 +1,5 @@
 import User from '../models/User';
+import bcrypt from 'bcryptjs';
 
 export const getAllUsers = async (req, res, next) => {
     let users;
@@ -27,11 +28,16 @@ export const signup = async (req, res, next) => {
     if (existUser) {
         return res.status(400).json({ message: "Mail daha önce kayıt edilmiş" })
     }
+
+    const hashedPassword = bcrypt.hashSync(password)
+
     const user = new User({
         name,
         email,
-        password
+        password: hashedPassword
     });
+
+
 
     try {
         await user.save();
@@ -39,4 +45,28 @@ export const signup = async (req, res, next) => {
         return console.log(error);
     }
     return res.status(201).json({ user })
+}
+
+
+export const login = async (req, res, next) => {
+    const { email, password } = req.body;
+    let existUser;
+    try {
+        existUser = await User.findOne({ email })
+    } catch (error) {
+        return console.log(error);
+    }
+    if (!existUser) {
+        return res.status(404).json({ message: "Kullanıcı kayıtlı değil. Lütfen kayıt olunuz!" })
+    }
+
+    const isPasswordCorrect = bcrypt.compareSync(password, existUser.password);
+    if (!isPasswordCorrect) {
+        return res.status(400).json({
+            message: "Geçersiz parola!"
+        })
+    }
+    return res.status(200).json({
+        message: "Giriş işlemi başarılı"
+    })
 }
